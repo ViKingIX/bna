@@ -7,26 +7,26 @@
 # See LICENSE.bna for copyright and licensing details.
 #
 
-GCC_4_1_SP3     := $(shell                                                                      \
-                        GCC_MAJOR=`echo|gcc -dM -E -|grep __GNUC__|cut -d' ' -f3`;              \
-                        GCC_MINOR=`echo|gcc -dM -E -|grep __GNUC_MINOR__|cut -d' ' -f3`;        \
-                        GCC_PATCHLEVEL=`echo|gcc -dM -E -|grep __GNUC_PATCHLEVEL_|cut -d' ' -f3`;\
-                        if [ $$GCC_MAJOR == 4 -a $$GCC_MINOR == 1 ]; then                       \
-                                if [ $$GCC_PATCHLEVEL == 1 -o $$GCC_PATCHLEVEL == 2 ]; then     \
-                                        echo 1;                                                 \
-                                fi                                                              \
-                        fi)
+#GCC_4_1_SP3     := $(shell                                                                      \
+#                        GCC_MAJOR=`echo|gcc -dM -E -|grep __GNUC__|cut -d' ' -f3`;              \
+#                        GCC_MINOR=`echo|gcc -dM -E -|grep __GNUC_MINOR__|cut -d' ' -f3`;        \
+#                        GCC_PATCHLEVEL=`echo|gcc -dM -E -|grep __GNUC_PATCHLEVEL_|cut -d' ' -f3`;\
+#                        if [ $$GCC_MAJOR == 4 -a $$GCC_MINOR == 1 ]; then                       \
+#                                if [ $$GCC_PATCHLEVEL == 1 -o $$GCC_PATCHLEVEL == 2 ]; then     \
+#                                        echo 1;                                                 \
+#                                fi                                                              \
+#                        fi)
 
-IS_SUSE_SP3     := $(shell                                                                              \
-                        if [ -f /etc/SuSE-release ]; then                                               \
-                                sles_ver=`cat /etc/SuSE-release |grep "VERSION"|awk '{print $$3}'`;     \
-                                patch_lvl=`cat /etc/SuSE-release |grep "PATCHLEVEL" | awk '{print $$3}'`;\
-                                if [ $$sles_ver == 10 ]; then                                           \
-                                        if [ $$patch_lvl == 2 -o $$patch_lvl == 3 ]; then               \
-                                                echo 1;                                                 \
-                                        fi                                                              \
-                                fi                                                                      \
-                        fi)
+#IS_SUSE_SP3     := $(shell                                                                              \
+#                        if [ -f /etc/SuSE-release ]; then                                               \
+#                                sles_ver=`cat /etc/SuSE-release |grep "VERSION"|awk '{print $$3}'`;     \
+#                                patch_lvl=`cat /etc/SuSE-release |grep "PATCHLEVEL" | awk '{print $$3}'`;\
+#                                if [ $$sles_ver == 10 ]; then                                           \
+#                                        if [ $$patch_lvl == 2 -o $$patch_lvl == 3 ]; then               \
+#                                                echo 1;                                                 \
+#                                        fi                                                              \
+#                                fi                                                                      \
+#                        fi)
 
 BASE_OBJECTS := bnad.o bnad_compat.o bnad_ethtool.o \
 		bnad_ioctl.o bnad_aen.o \
@@ -49,7 +49,7 @@ endif
 		
 KERNEL_DIR := /lib/modules/$(shell uname -r)/build
 
-BNA_SRC := /usr/src/bna
+BNA_SRC := $(PWD)
 include $(BNA_SRC)/bna_linux.make
 
 OBJECT_FILES += $(BASE_OBJECTS) $(BNA_OBJECTS) $(CNA_OBJECTS)
