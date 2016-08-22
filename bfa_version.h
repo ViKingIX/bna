@@ -1,0 +1,10 @@
+#define BFA_VERSION            "3.2.6.0"
+#define BFA_MAJOR              3
+#define BFA_MINOR              2
+#define BFA_REV                6
+#define BFA_PATCH              0
+#define BFA_BUILD              sqa
+#define BFA_COPYRIGHT_YEAR     "2015"
+#define BFA_BLD_TAG            "3.2.6.0"
+#define BFA_BLD_DATE           "05/28/2015"
+#define BFA_BLD_TIME           "14.32.03"
