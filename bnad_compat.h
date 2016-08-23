@@ -251,6 +251,15 @@ extern void bnad_lro_stats_clear(struct bnad_s *bnad);
 extern void bnad_netdev_init(struct bnad_s *bnad, bool using_dac);
 extern void bnad_set_netdev_perm_addr(struct bnad_s *bnad);
 extern int bnad_tso_prepare(struct bnad_s *bnad, struct sk_buff *skb);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 14, 0)
+extern uint16_t bnad_tx_select_queue(struct net_device *netdev,
+				     struct sk_buff *skb);
+#else
+extern uint16_t bnad_tx_select_queue(struct net_device *netdev,
+				     struct sk_buff *skb,
+				     void *accel_priv,
+				     select_queue_fallback_t fallback);
+#endif
 extern void bnad_netif_rx_schedule_poll(struct bnad_s *bnad,
 					struct bna_ccb_s *ccb);
 
@@ -310,6 +319,12 @@ struct delayed_work {
 	(_timer)->data = (_data);		\
 	init_timer((_timer));			\
 }
+#endif
+
+#if LINUX_VERSION_CODE > KERNEL_VERSION(3, 15, 0)
+#define bnad_smp_mb() smp_mb__before_atomic()
+#else
+#define bnad_smp_mb() smp_mb__before_clear_bit()
 #endif
 
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 30)
@@ -687,6 +702,21 @@ typedef netdev_features_t bnad_netdev_features_t;
 bnad_netdev_features_t bnad_fix_features(struct net_device *netdev,
 					bnad_netdev_features_t features);
 int bnad_set_features(struct net_device *dev, bnad_netdev_features_t features);
+#endif
+
+/*
+ * linux kernel 4.0 renames vlan_tx_* helpers since "tx" is misleading there.
+ * The same macros are used for rx as well.
+ */
+#if defined(vlan_tx_tag_present)
+#define bnad_vlan_tag_present(_skb) vlan_tx_tag_present(_skb)
+#else
+#define bnad_vlan_tag_present(_skb) skb_vlan_tag_present(_skb)
+#endif
+#if defined(vlan_tx_tag_get)
+#define bnad_vlan_tag_get(_skb) vlan_tx_tag_get(_skb)
+#else
+#define bnad_vlan_tag_get(_skb) skb_vlan_tag_get(_skb)
 #endif
 
 /*

@@ -33,12 +33,6 @@ extern uint32_t bna_napi_dim_vector[][BNA_BIAS_T_MAX];
  *
  */
 
-#define vlan_tx_tag_get(__skb)          ((__skb)->vlan_tci & ~VLAN_TAG_PRESENT)
-#define vlan_tx_tag_present(__skb)      ((__skb)->vlan_tci & VLAN_TAG_PRESENT)
-#define smp_mb__before_clear_bit()      barrier()
-#define SET_ETHTOOL_OPS(netdev,ops) \
-	( (netdev)->ethtool_ops = (ops) )
-
 
 #define BNA_IOC_TIMER_FREQ		BFA_TIMER_FREQ
 

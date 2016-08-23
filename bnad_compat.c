@@ -1059,8 +1059,22 @@ bnad_netif_rx_schedule_poll(struct bnad_s *bnad, struct bna_ccb_s *ccb)
 	}
 }
 
+/*
+ * New param introduced for .ndo_select_queue()
+ * accel_priv - for just selecting queues in the case of l2 forwarding offload.
+ * fallback - for ndo_select_queue() callback that passes a fallback handler.
+ * Drivers invoke this function within their customized implementation in case
+ * of skbs that don't need any special handling.
+ *
+ * Currently, both not supported by bnad driver.
+ */
 uint16_t
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 14, 0)
 bnad_tx_select_queue(struct net_device *netdev, struct sk_buff *skb)
+#else
+bnad_tx_select_queue(struct net_device *netdev, struct sk_buff *skb,
+		     void *accel_priv, select_queue_fallback_t fallback)
+#endif
 {
 	struct bnad_s	*bnad =  netdev_priv(netdev);
 	struct bna_s 	*bna = &bnad->bna;
@@ -1070,10 +1084,10 @@ bnad_tx_select_queue(struct net_device *netdev, struct sk_buff *skb)
 		prio = 0;
 	else if (bna_is_iscsi_over_cee(&bnad->bna) && bnad_is_iscsi(skb))
 		prio = bna_iscsi_prio(bna);
-	else if (vlan_tx_tag_present(skb)) {
+	else if (bnad_vlan_tag_present(skb)) {
 		uint8_t pkt_vlan_prio = 0;
 		uint16_t pkt_vlan_tag = 0;
-		pkt_vlan_tag = (uint16_t)vlan_tx_tag_get(skb);
+		pkt_vlan_tag = (uint16_t)bnad_vlan_tag_get(skb);
 		pkt_vlan_prio = (pkt_vlan_tag & BNAD_VLAN_PRIO_MASK)
 					>> BNAD_VLAN_PRIO_SHIFT;
 		prio = bna_prio_allowed(bna, pkt_vlan_prio) ?

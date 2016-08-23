@@ -28,6 +28,13 @@
 #                                fi                                                                      \
 #                        fi)
 
+#IS_RHEL_68	:= $(shell                                                               \
+#                        rhel=`lsb_release -i -r | grep RedHatEnterpriseWorkstation`;     \
+#                        distro=`lsb_release -i -r | grep 6.8`;                           \
+#                        if [ -n $$rhel ] && [ -n $$distro ]; then                        \
+#                                echo 1;                                                  \
+#                        fi)
+
 BASE_OBJECTS := bnad.o bnad_compat.o bnad_ethtool.o \
 		bnad_ioctl.o bnad_aen.o \
 		bnad_ioctl_common.o bnad_diag_lb_common.o

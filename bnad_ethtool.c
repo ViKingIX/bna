@@ -1345,7 +1345,11 @@ static const struct ethtool_ops_ext bnad_ethtool_ops_ext = {
 void
 bnad_set_ethtool_ops(struct net_device *netdev)
 {
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 16, 0))
 	SET_ETHTOOL_OPS(netdev, &bnad_ethtool_ops);
+#else
+	netdev->ethtool_ops = &bnad_ethtool_ops;
+#endif
 #if defined(RHEL_RELEASE_VERSION)
 #if (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(6, 4)) && (!RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7, 0))
 	set_ethtool_ops_ext(netdev, &bnad_ethtool_ops_ext);

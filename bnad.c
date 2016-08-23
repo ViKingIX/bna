@@ -237,7 +237,7 @@ bnad_tx_cleanup(struct delayed_work *work)
 
 		bnad_txq_cleanup(bnad, tcb);
 
-		smp_mb__before_clear_bit();
+		bnad_smp_mb();
 		clear_bit(BNAD_TXQ_FREE_SENT, &tcb->flags);
 	}
 
@@ -335,7 +335,7 @@ bnad_tx_complete(struct bnad_s *bnad, struct bna_tcb_s *tcb)
 	if (likely(test_bit(BNAD_TXQ_TX_STARTED, &tcb->flags)))
 		bna_ib_ack(tcb->i_dbell, sent);
 
-	smp_mb__before_clear_bit();
+	bnad_smp_mb();
 	clear_bit(BNAD_TXQ_FREE_SENT, &tcb->flags);
 
 	return sent;
@@ -350,8 +350,8 @@ bnad_txq_wi_prepare(struct bnad_s *bnad, struct bna_tcb_s *tcb,
 	uint32_t gso_size;
 	uint16_t vlan_tag = 0;
 
-	if (vlan_tx_tag_present(skb)) {
-		vlan_tag = (uint16_t)vlan_tx_tag_get(skb);
+	if (bnad_vlan_tag_present(skb)) {
+		vlan_tag = (uint16_t)bnad_vlan_tag_get(skb);
 		flags |= (BNA_TXQ_WI_CF_INS_PRIO | BNA_TXQ_WI_CF_INS_VLAN);
 	}
 	if (test_bit(BNAD_RF_CEE_RUNNING, &bnad->run_flags)) {
@@ -471,17 +471,17 @@ bnad_start_xmit(struct sk_buff *skb, struct net_device *netdev)
 	/* Sanity checks for the skb */
 
 	if (unlikely(skb->len <= ETH_HLEN)) {
-		dev_kfree_skb(skb);
+		dev_kfree_skb_any(skb);
 		BNAD_UPDATE_CTR(bnad, tx_skb_too_short);
 		return NETDEV_TX_OK;
 	}
 	if (unlikely(len > BFI_TX_MAX_DATA_PER_VECTOR)) {
-		dev_kfree_skb(skb);
+		dev_kfree_skb_any(skb);
 		BNAD_UPDATE_CTR(bnad, tx_skb_headlen_zero);
 		return NETDEV_TX_OK;
 	}
 	if (unlikely(len == 0)) {
-		dev_kfree_skb(skb);
+		dev_kfree_skb_any(skb);
 		BNAD_UPDATE_CTR(bnad, tx_skb_headlen_zero);
 		return NETDEV_TX_OK;
 	}
@@ -494,7 +494,7 @@ bnad_start_xmit(struct sk_buff *skb, struct net_device *netdev)
 	 * and the netif_tx_stop_all_queues() call.
 	 */
 	if (unlikely(!tcb || !test_bit(BNAD_TXQ_TX_STARTED, &tcb->flags))) {
-		dev_kfree_skb(skb);
+		dev_kfree_skb_any(skb);
 		BNAD_UPDATE_CTR(bnad, tx_skb_stopping);
 		return NETDEV_TX_OK;
 	}
@@ -508,7 +508,7 @@ bnad_start_xmit(struct sk_buff *skb, struct net_device *netdev)
 	wis = BNA_TXQ_WI_NEEDED(vectors);	/* 4 vectors per work item */
 
 	if (unlikely(vectors > BFI_TX_MAX_VECTORS_PER_PKT)) {
-		dev_kfree_skb(skb);
+		dev_kfree_skb_any(skb);
 		BNAD_UPDATE_CTR(bnad, tx_skb_max_vectors);
 		return NETDEV_TX_OK;
 	}
@@ -521,7 +521,7 @@ bnad_start_xmit(struct sk_buff *skb, struct net_device *netdev)
 			sent = bnad_txcmpl_process(bnad, tcb);
 			if (likely(test_bit(BNAD_TXQ_TX_STARTED, &tcb->flags)))
 				bna_ib_ack(tcb->i_dbell, sent);
-			smp_mb__before_clear_bit();
+			bnad_smp_mb();
 			clear_bit(BNAD_TXQ_FREE_SENT, &tcb->flags);
 		} else {
 			bnad_stop_txq(netdev, txq_id);
@@ -548,7 +548,7 @@ bnad_start_xmit(struct sk_buff *skb, struct net_device *netdev)
 
 	/* Program the opcode, flags, frame_len, num_vectors in WI */
 	if (bnad_txq_wi_prepare(bnad, tcb, skb, txqent)) {
-		dev_kfree_skb(skb);
+		dev_kfree_skb_any(skb);
 		return NETDEV_TX_OK;
 	}
 	txqent->hdr.wi.reserved = 0;
@@ -574,7 +574,7 @@ bnad_start_xmit(struct sk_buff *skb, struct net_device *netdev)
 			/* Undo the changes starting at tcb->producer_index */
 			bnad_tx_buff_unmap(bnad, unmap_q, q_depth,
 				tcb->producer_index);
-			dev_kfree_skb(skb);
+			dev_kfree_skb_any(skb);
 			BNAD_UPDATE_CTR(bnad, tx_skb_frag_zero);
 			return NETDEV_TX_OK;
 		}
@@ -602,7 +602,7 @@ bnad_start_xmit(struct sk_buff *skb, struct net_device *netdev)
 	if (unlikely(len != skb->len)) {
 		/* Undo the changes starting at tcb->producer_index */
 		bnad_tx_buff_unmap(bnad, unmap_q, q_depth, tcb->producer_index);
-		dev_kfree_skb(skb);
+		dev_kfree_skb_any(skb);
 		BNAD_UPDATE_CTR(bnad, tx_skb_len_mismatch);
 		return NETDEV_TX_OK;
 	}
@@ -957,6 +957,7 @@ bnad_cq_setup_skb_frags(struct bna_rcb_s *rcb, struct sk_buff *skb,
 		/* each vector is filled to its max except the last */
 		len = (vec == nvecs) ?
 			last_fraglen : unmap->vector.len;
+		skb->truesize += unmap->vector.len;
 		totlen += len;
 
 		skb_fill_page_desc(skb, skb_shinfo(skb)->nr_frags,
@@ -968,7 +969,6 @@ bnad_cq_setup_skb_frags(struct bna_rcb_s *rcb, struct sk_buff *skb,
 
 	skb->len += totlen;
 	skb->data_len += totlen;
-	skb->truesize += totlen;
 }
 
 static inline void
@@ -1060,6 +1060,8 @@ bnad_cq_process(struct bnad_s *bnad, struct bna_ccb_s *ccb, int budget)
 				break;
 		}
 
+		packets++;
+
 		/* TODO: BNA_CQ_EF_LOCAL ? */
 		if (unlikely(flags & (BNA_CQ_EF_MAC_ERROR |
 						BNA_CQ_EF_FCS_ERROR |
@@ -1082,7 +1084,6 @@ bnad_cq_process(struct bnad_s *bnad, struct bna_ccb_s *ccb, int budget)
 		else
 			bnad_cq_setup_skb_frags(rcb, skb, sop_ci, nvecs, len);
 
-		packets++;
 		rcb->rxq->rx_packets++;
 		rcb->rxq->rx_bytes += totlen;
 		ccb->bytes_per_intr += totlen;

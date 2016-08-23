@@ -369,8 +369,6 @@ extern struct list_head 	bnad_list;
 extern int bnad_open(struct net_device *netdev);
 extern int bnad_stop(struct net_device *netdev);
 extern int bnad_start_xmit(struct sk_buff *skb, struct net_device *netdev);
-extern uint16_t bnad_tx_select_queue(struct net_device *netdev,
-				struct sk_buff *skb);
 extern void bnad_set_rx_mode(struct net_device *netdev);
 extern struct net_device_stats *bnad_get_netdev_stats(
 				struct net_device *netdev);
