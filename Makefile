@@ -89,6 +89,10 @@ clean_files := \( -name "*.o" -o -name "*.ko" -o -name "*.tgz" -o -name "*.mod.o
 all build: 
 	$(MAKE) -C $(KERNEL_DIR) M=`pwd` CONFIG_DEBUG_INFO=
 
+DEST = /lib/modules/$(shell uname -r)/kernel/drivers/net/ethernet/brocade/bna
+install: build
+	sudo install -b -o root -g root -D -m 0644 bna.ko $(DEST)/bna.ko
+
 cscope:
 	@rm -rf cscope.*
 	@find . -name "*.[ch]" >cscope.files
